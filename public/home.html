@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <section class="sectionLeft">
+        <div>
+            <button onclick=obtenerProductosDesdeAPI()>GetProducts</button>
+        </div>
+        <div>
+            ID<input type="number" id="GetProductId">
+            <button onclick=obtenerProductoIdDesdeAPI()>GetProductById</button>
+        </div>
+        <div>
+            Title<input type="text" id="PostTitleInput">
+            Description<input type="text" id="PostDescriptionInput">
+            Code<input type="text" id="PostCodeInput">
+            Stock<input type="number" id="PostStockInput">
+            Category<input type="text" id="PostCategoryInput">
+            <button onclick=agregarProductoApi()>AddProduct</button>
+        </div>
+        <div>
+            ID<input type="number" id="PutIDInput">
+            Title<input type="text" id="PutTitleInput">
+            Description<input type="text" id="PutDescriptionInput">
+            Code<input type="text" id="PutCodeInput">
+            Stock<input type="number" id="PutStockInput">
+            Category<input type="text" id="PutCategoryInput">
+            <button onclick=actualizarProductoApi()>UpdateProduct</button>
+        </div>
+        <div>
+            ID<input type="number" id="DeleteProductInput">
+            <button onclick=eliminarProductoApi()>DeleteProduct</button>
+        </div>
+        <div>
+        </div>
+        <div>
+            <button onclick=crearCarritoApi()>CreateCart</button>
+        </div>
+        <div>
+            ID<input type="number" id="GetCartIdInput">
+            <button onclick=obtenerCarritoApi()>GetCart</button>
+        </div>
+        <div>
+            Cart ID<input type="number" id="PostCartIdCartInput">
+            Product ID<input type="number" id="PostCartIdProductInput">
+            <button onclick=agregarACarritoApi()>AddToCart</button>
+        </div>
+    </section>
+    <section>
+        <h2>Results:</h2>
+        <div id="divResults">
+    </section>
+    </div>
+</body>
+</html>
+<style>
+    div{
+       border-top: 1px black solid; 
+       margin-top: 10px; 
+       padding: 5px; 
+    }
+    body{
+        display: flex;
+    }
+    .sectionLeft{
+        max-width: 50%;
+        margin:15px
+    }
+
+</style>
+<script>
+
+async function obtenerProductosDesdeAPI() {
+    try {
+        const response = await fetch('./api/products/');
+
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
+        }
+
+        const productos = await response.json();
+
+        const jsonOutput = JSON.stringify(productos, null, 2);
+        document.getElementById("divResults").innerHTML = `
+            <p>GetProducts Results:</p>
+            <pre>${jsonOutput}</pre>
+        `+document.getElementById("divResults").innerHTML;
+
+        console.log('¡Productos obtenidos con éxito! Aquí está el array:', productos);
+
+        return productos;
+
+    } catch (error) {
+        console.error('Hubo un problema al obtener los productos:', error);
+    }
+}
+async function obtenerProductoIdDesdeAPI(){
+    const divResults = document.getElementById("divResults");
+    try{
+        let id=document.getElementById("GetProductId").value;
+        if (!id) {
+            divResults.innerHTML = `<p style="color: red;">Error: El ID del producto es requerido para buscar.</p>` + divResults.innerHTML;
+            return;
+        }
+        const productIdNum = Number(id);
+        if (isNaN(productIdNum) || productIdNum <= 0) {
+            divResults.innerHTML = `<p style="color: red;">Error: El ID del producto debe ser un número positivo para buscar.</p>` + divResults.innerHTML;
+            return;
+        }
+
+        const response = await fetch('./api/products/'+productIdNum);
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Error HTTP: ${response.status} - ${response.statusText}`);
+        }
+
+        const producto = await response.json();
+
+        const jsonOutput = JSON.stringify(producto, null, 2);
+        const timestamp = new Date().toLocaleTimeString();
+
+        divResults.innerHTML = `
+            <p>Resultado de GetProductById:</h2>
+            <pre>${jsonOutput}</pre>
+        ` + divResults.innerHTML;
+
+        console.log('¡Producto obtenido con éxito! Aquí está el array:', producto);
+
+        return producto;
+    }catch(error){
+        console.error('Hubo un problema al obtener el producto:', error)
+        divResults.innerHTML = `
+            <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px solid #fdd;">
+            <h2>Error al obtener producto por ID:</h2>
+            <pre style="color: red;">${error.message}</pre>
+        ` + divResults.innerHTML;
+    }
+}
+async function agregarProductoApi() {
+    try {
+        const title = document.getElementById("PostTitleInput").value;
+        const description = document.getElementById("PostDescriptionInput").value;
+        const code = document.getElementById("PostCodeInput").value;
+        const stockInput = document.getElementById("PostStockInput").value;
+        const category = document.getElementById("PostCategoryInput").value;
+
+        let stock = undefined; 
+        if (stockInput.trim() !== '') { 
+            const parsedStock = Number(stockInput);
+            if (!isNaN(parsedStock) && parsedStock >= 0) {
+                stock = parsedStock; 
+            } else {
+                divResults.innerHTML += `<p style="color: red;">Error: El stock debe ser un número no negativo.</p>`;
+                return; 
+            }
+        }
+
+        const payload = {
+            title: title,
+            description: description || undefined,
+            code: code || undefined,
+            stock: stock,
+            category: category || undefined,
+        };
+
+        Object.keys(payload).forEach(key => {
+            if (payload[key] === undefined || payload[key] === '') {
+                delete payload[key];
+            }
+        });
+
+        const response = await fetch('/api/products/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            console.error('Error al agregar producto:', result.error || 'Error desconocido');
+            document.getElementById("divResults").innerHTML = `
+                <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px solid #fdd;">
+                <h2>Error al agregar producto:</h2>
+                <pre style="color: red;">${JSON.stringify(result, null, 2)}</pre>
+                `+document.getElementById("divResults").innerHTML;
+            return;
+        }
+
+        console.log('Producto agregado con éxito:', result.product);
+        document.getElementById("divResults").innerHTML = `
+            <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px solid #ddf;">
+            <h2>Producto Agregado Exitosamente:</h2>
+            <pre style="color: green;">${JSON.stringify(result, null, 2)}</pre>
+            `+document.getElementById("divResults").innerHTML;
+
+        document.getElementById("PostTitleInput").value = '';
+        document.getElementById("PostDescriptionInput").value = '';
+        document.getElementById("PostCodeInput").value = '';
+        document.getElementById("PostStockInput").value = '';
+        document.getElementById("PostCategoryInput").value = '';
+
+    } catch (error) {
+        console.error('Hubo un problema de red o en el cliente:', error);
+        document.getElementById("divResults").innerHTML = `
+            <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px solid #fdd;">
+            <h2>Error de conexión:</h2>
+            <pre style="color: red;">${error.message}</pre>
+            `+document.getElementById("divResults").innerHTML;
+    }
+}
+async function actualizarProductoApi() {
+    const divResults = document.getElementById("divResults");
+    divResults.innerHTML += '<p>Enviando actualización de producto...</p>';
+
+    try {
+        const ID = document.getElementById("PutIDInput").value;
+        const title = document.getElementById("PutTitleInput").value; 
+        const description = document.getElementById("PutDescriptionInput").value;
+        const code = document.getElementById("PutCodeInput").value;
+        const stockInput = document.getElementById("PutStockInput").value;
+        const category = document.getElementById("PutCategoryInput").value;
+
+        const price = undefined;
+        const status = undefined;
+        const thumbnails = undefined;
+
+        if (!ID) {
+            document.getElementById("divResults").innerHTML = `<p style="color: red;">Error: El ID del producto es requerido para actualizar.</p>`+document.getElementById("divResults").innerHTML;
+            return;
+        }
+        const productIdNum = Number(ID);
+        if (isNaN(productIdNum) || productIdNum <= 0) {
+            document.getElementById("divResults").innerHTML = `<p style="color: red;">Error: El ID del producto debe ser un número positivo para actualizar.</p>`+document.getElementById("divResults").innerHTML;
+            return;
+        }
+
+        let stock = undefined;
+        if (stockInput.trim() !== '') {
+            const parsedStock = Number(stockInput);
+            if (!isNaN(parsedStock) && parsedStock >= 0) {
+                stock = parsedStock;
+            } else {
+                document.getElementById("divResults").innerHTML = `<p style="color: red;">Error: El stock debe ser un número no negativo.</p>`+ document.getElementById("divResults").innerHTML;
+                return;
+            }
+        }
+
+        const payload = {
+            title: title || undefined, 
+            description: description || undefined,
+            code: code || undefined,
+            price: price, 
+            status: status, 
+            stock: stock,
+            category: category || undefined,
+            thumbnails: thumbnails
+        };
+
+        Object.keys(payload).forEach(key => {
+            if (payload[key] === undefined || payload[key] === '') {
+                delete payload[key];
+            }
+        });
+
+        const response = await fetch(`/api/products/${productIdNum}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        });
+
+        const result = await response.json(); 
+
+        if (!response.ok) {
+            console.error('Error al actualizar producto:', result.error || 'Error desconocido');
+            document.getElementById("divResults").innerHTML = `
+                <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px solid #fdd;">
+                <h2>Error al actualizar producto:</h2>
+                <pre style="color: red;">${JSON.stringify(result, null, 2)}</pre>
+                `+document.getElementById("divResults").innerHTML;
+            return;
+        }
+
+        console.log('Producto actualizado con éxito:', result.product);
+        document.getElementById("divResults").innerHTML = `
+            <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px solid #ddf;">
+            <h2>Producto Actualizado Exitosamente:</h2>
+            <pre style="color: green;">${JSON.stringify(result, null, 2)}</pre>
+            `+document.getElementById("divResults").innerHTML;
+
+        document.getElementById("PutIDInput").value = '';
+        document.getElementById("PutTitleInput").value = '';
+        document.getElementById("PutDescriptionInput").value = '';
+        document.getElementById("PutCodeInput").value = '';
+        document.getElementById("PutStockInput").value = '';
+        document.getElementById("PutCategoryInput").value = '';
+
+    } catch (error) {
+        console.error('Hubo un problema de red o en el cliente:', error);
+        document.getElementById("divResults").innerHTML = `
+            <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px solid #fdd;">
+            <h2>Error de conexión:</h2>
+            <pre style="color: red;">${error.message}</pre>
+            `+document.getElementById("divResults").innerHTML;
+    }
+}
+async function eliminarProductoApi() {
+    const divResults = document.getElementById("divResults");
+    divResults.innerHTML = `<p>Enviando solicitud de eliminación...</p>` + divResults.innerHTML;
+    try {
+        const deleteIdInput = document.getElementById("DeleteProductInput").value;
+
+        if (!deleteIdInput) {
+            divResults.innerHTML = `<p style="color: red;">Error: El ID del producto es requerido para eliminar.</p>` + divResults.innerHTML;
+            return;
+        }
+        const productIdNum = Number(deleteIdInput);
+        if (isNaN(productIdNum) || productIdNum <= 0) {
+            divResults.innerHTML = `<p style="color: red;">Error: El ID del producto debe ser un número positivo para eliminar.</p>` + divResults.innerHTML;
+            return;
+        }
+
+        const response = await fetch(`/api/products/${productIdNum}`, { 
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            console.error('Error al eliminar producto:', result.error || 'Error desconocido');
+            divResults.innerHTML = `
+                <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px solid #fdd;">
+                <h2>Error al eliminar producto:</h2>
+                <pre style="color: red;">${JSON.stringify(result, null, 2)}</pre>
+                ` + divResults.innerHTML;
+            return;
+        }
+
+        console.log('Producto eliminado con éxito:', result.product);
+        divResults.innerHTML = `
+            <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px solid #ddf;">
+            <h2>Producto Eliminado Exitosamente:</h2>
+            <pre style="color: green;">${JSON.stringify(result, null, 2)}</pre>
+            ` + divResults.innerHTML;
+
+        document.getElementById("DeleteProductInput").value = '';
+
+    } catch (error) {
+        console.error('Hubo un problema de red o en el cliente:', error);
+        divResults.innerHTML = `
+            <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px solid #fdd;">
+            <h2>Error de conexión:</h2>
+            <pre style="color: red;">${error.message}</pre>
+            ` + divResults.innerHTML;
+    }
+}
+async function crearCarritoApi() {
+    const divResults = document.getElementById("divResults");
+    divResults.innerHTML = `<p>Enviando solicitud para crear carrito...</p>` + divResults.innerHTML;
+    try {
+        const response = await fetch('/api/carts/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            console.error('Error al crear carrito:', result.error || 'Error desconocido');
+            divResults.innerHTML = `
+                <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px solid #fdd;">
+                <h2>Error al Crear Carrito:</h2>
+                <pre style="color: red;">${JSON.stringify(result, null, 2)}</pre>
+                ` + divResults.innerHTML;
+            return;
+        }
+
+        console.log('Carrito creado con éxito:', result.cart);
+        divResults.innerHTML = `
+            <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px solid #ddf;">
+            <p>Carrito Creado Exitosamente:</p>
+            <pre style="color: green;">${JSON.stringify(result, null, 2)}</pre>
+            ` + divResults.innerHTML;
+
+    } catch (error) {
+        console.error('Hubo un problema de red o en el cliente:', error);
+        divResults.innerHTML = `
+            <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px solid #fdd;">
+            <h2>Error de conexión:</h2>
+            <pre style="color: red;">${error.message}</pre>
+            ` + divResults.innerHTML;
+    }
+}
+async function obtenerCarritoApi() {
+    const divResults = document.getElementById("divResults");
+    try {
+        const cartIdInput = document.getElementById("GetCartIdInput").value;
+
+        if (!cartIdInput) {
+            divResults.innerHTML = `<p style="color: red;">Error: El ID del carrito es requerido para buscar.</p>` + divResults.innerHTML;
+            return;
+        }
+        const cartIdNum = Number(cartIdInput);
+        if (isNaN(cartIdNum) || cartIdNum <= 0) {
+            divResults.innerHTML = `<p style="color: red;">Error: El ID del carrito debe ser un número positivo para buscar.</p>` + divResults.innerHTML;
+            return;
+        }
+
+        const response = await fetch(`/api/carts/${cartIdNum}`); // Ruta con el ID del carrito
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            console.error('Error al obtener carrito:', result.error || 'Error desconocido');
+            divResults.innerHTML = `
+                <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px solid #fdd;">
+                <h2>Error al Obtener Carrito:</h2>
+                <pre style="color: red;">${JSON.stringify(result, null, 2)}</pre>
+                ` + divResults.innerHTML;
+            return;
+        }
+
+        console.log('Carrito obtenido con éxito:', result);
+        const jsonOutput = JSON.stringify(result, null, 2);
+        const timestamp = new Date().toLocaleTimeString();
+
+        divResults.innerHTML = `
+            <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px solid #ddf;">
+            <p>Carrito ID ${cartIdNum} Obtenido Exitosamente:</p>
+            <pre style="color: green;">${jsonOutput}</pre>
+            ` + divResults.innerHTML;
+
+        document.getElementById("GetCartIdInput").value = '';
+    } catch (error) {
+        console.error('Hubo un problema de red o en el cliente:', error);
+        divResults.innerHTML = `
+            <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px solid #fdd;">
+            <h2>Error de conexión:</h2>
+            <pre style="color: red;">${error.message}</pre>
+            ` + divResults.innerHTML;
+    }
+}
+async function agregarACarritoApi() {
+    const divResults = document.getElementById("divResults");
+    try {
+        const cartIdInput = document.getElementById("PostCartIdCartInput").value;
+        const productIdInput = document.getElementById("PostCartIdProductInput").value;
+
+        const quantity = 1; 
+
+        if (!cartIdInput) {
+            divResults.innerHTML = `<p style="color: red;">Error: El ID del carrito es requerido.</p>` + divResults.innerHTML;
+            return;
+        }
+        const cartIdNum = Number(cartIdInput);
+        if (isNaN(cartIdNum) || cartIdNum <= 0) {
+            divResults.innerHTML = `<p style="color: red;">Error: El ID del carrito debe ser un número positivo.</p>` + divResults.innerHTML;
+            return;
+        }
+
+        if (!productIdInput) {
+            divResults.innerHTML = `<p style="color: red;">Error: El ID del producto es requerido.</p>` + divResults.innerHTML;
+            return;
+        }
+        const productIdNum = Number(productIdInput);
+        if (isNaN(productIdNum) || productIdNum <= 0) {
+            divResults.innerHTML = `<p style="color: red;">Error: El ID del producto debe ser un número positivo.</p>` + divResults.innerHTML;
+            return;
+        }
+
+        const payload = {
+        };
+
+        const response = await fetch(`/api/carts/${cartIdNum}/product/${productIdNum}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload), 
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            console.error('Error al agregar producto al carrito:', result.error || 'Error desconocido');
+            divResults.innerHTML = `
+                <h2>Error al Agregar Producto al Carrito:</h2>
+                <pre style="color: red;">${JSON.stringify(result, null, 2)}</pre>
+                ` + divResults.innerHTML;
+            return;
+        }
+
+        console.log('Producto agregado al carrito con éxito:', result.cart);
+        divResults.innerHTML = `
+            <h2>Producto Agregado al Carrito Exitosamente:</h2>
+            <pre style="color: green;">${JSON.stringify(result, null, 2)}</pre>
+            ` + divResults.innerHTML;
+
+        document.getElementById("PostCartIdCartInput").value = '';
+        document.getElementById("PostCartIdProductInput").value = '';
+
+    } catch (error) {
+        console.error('Hubo un problema de red o en el cliente:', error);
+        divResults.innerHTML = `
+            <h2>Error de conexión:</h2>
+            <pre style="color: red;">${error.message}</pre>
+            ` + divResults.innerHTML;
+    }
+}
+</script>

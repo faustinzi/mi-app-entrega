@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "title": "Limon",
+    "description": "limones amarillos",
+    "price": 99,
+    "status": true,
+    "stock": 90,
+    "category": "Frutas",
+    "thumbnails": []
+  },
+  {
+    "id": 2,
+    "title": "Harina",
+    "description": "Harina 4 ceros",
+    "price": 99,
+    "status": true,
+    "stock": 5,
+    "category": "Ingredientes",
+    "thumbnails": []
+  }
+]
